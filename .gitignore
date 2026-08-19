@@ -1,0 +1,11 @@
+# Scraper data — stays local, never pushed to GitHub
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# macOS
+.DS_Store
