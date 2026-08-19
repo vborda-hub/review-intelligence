@@ -235,6 +235,45 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .ins-plan-kpi{font-size:9px;font-weight:700;padding:5px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--muted);line-height:1.4}
 @media(max-width:900px){.ratings-grid{grid-template-columns:1fr 1fr}.themes-row{grid-template-columns:1fr}.ins-priority-grid{grid-template-columns:1fr}.ins-comp-grid{grid-template-columns:1fr 1fr}.ins-edge-grid{grid-template-columns:1fr}.ins-brief-grid{grid-template-columns:1fr}.ins-copy-grid{grid-template-columns:1fr}.ins-platform-grid{grid-template-columns:1fr}.ins-seg-grid{grid-template-columns:1fr 1fr}.ins-plan-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.ratings-grid{grid-template-columns:1fr}.ins-comp-grid{grid-template-columns:1fr}.ins-seg-grid{grid-template-columns:1fr}.ins-plan-grid{grid-template-columns:1fr}}
+/* ── DIGEST EDITORIAL LAYOUT ─────────────────────────────────── */
+.dg-section{padding:14px 0;border-bottom:1px solid var(--border)}
+.dg-section:last-child{border-bottom:none;padding-bottom:4px}
+.dg-section-label{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;text-transform:uppercase}
+.dg-brand-card{border-radius:8px;border:1px solid var(--border);padding:12px;background:var(--surface2);border-left:3px solid var(--bc,#888);margin-bottom:0}
+.dg-brand-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.dg-brand-pill{color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.04em;flex-shrink:0}
+.dg-brand-name{font-weight:700;font-size:13px}
+.dg-new-badge{margin-left:auto;background:rgba(34,197,94,.12);color:#22c55e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid rgba(34,197,94,.25)}
+.dg-rating-row{display:flex;align-items:center;gap:5px;font-size:12px;margin-bottom:8px;flex-wrap:wrap}
+.dg-store-label{color:var(--muted);font-size:11px}
+.dg-rating-num{font-weight:700;font-size:13px}
+.dg-store-sep{color:var(--border);margin:0 2px}
+.dg-delta-pos{color:#22c55e;font-size:10px;font-weight:700}
+.dg-delta-neg{color:#f87171;font-size:10px;font-weight:700}
+.dg-delta-flat{color:var(--muted);font-size:10px}
+.dg-senti{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.dg-senti-chip{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.dg-senti-pos{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.dg-senti-neu{background:rgba(148,163,184,.1);color:var(--muted);border:1px solid var(--border)}
+.dg-senti-neg{background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+.dg-senti-d-pos{color:#22c55e;font-weight:700}
+.dg-senti-d-neg{color:#f87171;font-weight:700}
+.dg-themes-row{display:flex;gap:5px;flex-wrap:wrap}
+.dg-theme{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+.dg-theme-praise{background:rgba(34,197,94,.08);color:#22c55e}
+.dg-theme-comp{background:rgba(248,113,113,.08);color:#f87171}
+.dg-comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dg-impact-section{background:rgba(96,165,250,.05);border-radius:8px;padding:12px 14px!important;margin:0 -2px;border-bottom:none!important}
+.dg-impact-text{font-size:12px;line-height:1.65;color:var(--text);margin:0}
+.dg-actions-list{padding:0;margin:0;list-style:none;display:flex;flex-direction:column;gap:0}
+.dg-action{font-size:12px;line-height:1.6;padding:8px 0;color:var(--text);border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+.dg-action:last-child{border-bottom:none;padding-bottom:0}
+.dg-action-num{font-size:10px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.dg-quote-section{background:rgba(34,197,94,.04);border-radius:8px;padding:12px 14px!important;margin:0 -2px;border-bottom:none!important}
+.dg-quote{margin:0;padding:0 0 0 12px;border-left:3px solid #22c55e}
+.dg-quote-text{font-size:13px;font-style:italic;line-height:1.6;margin:0 0 6px;color:var(--text)}
+.dg-quote-cite{font-size:10px;color:var(--muted);font-style:normal;font-weight:600}
+@media(max-width:600px){.dg-comp-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -367,15 +406,56 @@ const PRAISE_THEMES = [
   {"id":"cs-good","name":"Customer Service","ac":3,"cy":3,"rbt":0,"icy":1}
 ];
 
-const DIGEST_ITEMS = [
-  {"color":"#22c55e","brand":"AC","text":"Arena Club: 4.5\u2605 App Store (4.9K ratings) \u00b7 4.3\u2605 Google Play (1.5K ratings). Sentiment: 40% positive / 5% neutral / 55% negative across 580 reviews on file. 580 new reviews added this week. Top complaint: Pack Value / ROI (223 mentions). Top praise: Platform Concept (153 mentions)."},
-  {"color":"#5B8DD9","brand":"CY","text":"Courtyard: 4.6\u2605 App Store (7.2K ratings) \u00b7 4.3\u2605 Google Play (2.2K ratings). Sentiment: 38% positive / 4% neutral / 58% negative across 690 reviews on file. 690 new reviews added this week. Top complaint: Pack Value / ROI (233 mentions). Top praise: Platform Concept (172 mentions)."},
-  {"color":"#E8823A","brand":"RBT","text":"Rips by Triumph: 4.7\u2605 App Store (167K ratings) \u00b7 4.5\u2605 Google Play (38.3K ratings). Sentiment: 60% positive / 5% neutral / 35% negative across 690 reviews on file. 690 new reviews added this week. Top complaint: Pack Value / ROI (154 mentions). Top praise: Platform Concept (258 mentions)."},
-  {"color":"#9B59B6","brand":"ICY","text":"IcyBox: 4.3\u2605 App Store (4.8K ratings) \u00b7 iOS only on Google Play. Sentiment: 46% positive / 2% neutral / 52% negative across 490 reviews on file. 490 new reviews added this week. Top complaint: Pack Value / ROI (171 mentions). Top praise: Platform Concept (126 mentions)."},
-  {"color":"#f87171","brand":"ALL","text":"Cross-brand #1 complaint: \"Pack Value / ROI\" \u2014 781 total negative mentions. Courtyard leads with 233 mentions."},
-  {"color":"#4ade80","brand":"ALL","text":"Cross-brand #1 praise: \"Platform Concept\" \u2014 709 positive mentions."},
-  {"color":"#94a3b8","brand":"ALL","text":"Archive total: 2450 reviews on file across all brands and sources. 2450 new reviews added this week."}
-];
+const WEEKLY_DIGEST = {
+  "week": "Aug 13\u2013Aug 19, 2026",
+  "total_new": 2450,
+  "arena_club": {
+    "rating_as": 4.5, "rating_gp": 4.3,
+    "rating_delta_as": 0, "rating_delta_gp": 0,
+    "new_reviews": 580, "new_appstore": 380, "new_gplay": 200,
+    "total_reviews": 580,
+    "sentiment": {"pos": 40, "neu": 5, "neg": 55},
+    "sentiment_delta": {"pos_delta": 0, "neg_delta": 0},
+    "top_complaint": "Pack Value / ROI",
+    "top_praise": "Buyback Guarantee"
+  },
+  "competitors": {
+    "courtyard": {
+      "rating_as": 4.6, "rating_gp": 4.3,
+      "rating_delta_as": 0, "rating_delta_gp": 0,
+      "new_reviews": 690, "new_appstore": 450, "new_gplay": 240,
+      "total_reviews": 690,
+      "sentiment": {"pos": 38, "neu": 4, "neg": 58},
+      "sentiment_delta": {"pos_delta": 0, "neg_delta": 0},
+      "top_complaint": "Customer Service", "top_praise": "Platform Concept"
+    },
+    "rbt": {
+      "rating_as": 4.7, "rating_gp": 4.5,
+      "rating_delta_as": 0, "rating_delta_gp": 0,
+      "new_reviews": 690, "new_appstore": 690, "new_gplay": 0,
+      "total_reviews": 690,
+      "sentiment": {"pos": 60, "neu": 5, "neg": 35},
+      "sentiment_delta": {"pos_delta": 0, "neg_delta": 0},
+      "top_complaint": "Pack Value / ROI", "top_praise": "Platform Concept"
+    },
+    "icybox": {
+      "rating_as": 4.3, "rating_gp": null,
+      "rating_delta_as": 0, "rating_delta_gp": 0,
+      "new_reviews": 490, "new_appstore": 490, "new_gplay": 0,
+      "total_reviews": 490,
+      "sentiment": {"pos": 46, "neu": 2, "neg": 52},
+      "sentiment_delta": {"pos_delta": 0, "neg_delta": 0},
+      "top_complaint": "Trust / Legitimacy", "top_praise": "Platform Concept"
+    }
+  },
+  "ad_impact": "Courtyard holds at 58% negative. Their churning users are a warm audience \u2014 target Courtyard brand keywords with AC's customer service speed as the hook. IcyBox stays at 52% negative with trust concerns. A direct comparison ad showing AC's real ratings and operating history converts displaced IcyBox users. AC's positive rate (40%) is an asset competitors can't match \u2014 pull actual user quotes into ad creative.",
+  "top_actions": [
+    "Counter \"Pack Value / ROI\" in ad copy \u2014 it's AC's top complaint. Lead with the Buyback Guarantee headline to neutralize value anxiety before a user even downloads.",
+    "Run CS contrast creatives targeting Courtyard brand keywords. Courtyard is 58% negative \u2014 their users are already looking for an exit. A converted-user testimonial closes the deal better than any branded ad.",
+    "Trigger in-app review prompts after successful rips. AC has 580 reviews vs RBT's 200K+ \u2014 review volume is social proof, and more reviews lower your CAC."
+  ],
+  "quote_of_week": null
+};
 
 const INSIGHTS = {
   "week": "Aug 13–Aug 19, 2026",
@@ -3229,12 +3309,124 @@ function toggleDigest() {
   document.getElementById('digestSub').textContent = digestOpen ? 'Click to collapse' : 'Click to expand';
 }
 function renderDigest() {
-  document.getElementById('digestItems').innerHTML = DIGEST_ITEMS.map(d =>
-    `<div class="digest-item">
-      <span class="digest-brand-tag" style="background:${d.color}">${d.brand}</span>
-      <span>${d.text}</span>
-    </div>`
+  const d = WEEKLY_DIGEST;
+  if (!d) return;
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  function fmtRatingDelta(v) {
+    if (!v) return '';
+    const sign = v > 0 ? '+' : '';
+    const cls  = v > 0 ? 'dg-delta-pos' : (v < 0 ? 'dg-delta-neg' : 'dg-delta-flat');
+    return `<span class="${cls}">${sign}${v.toFixed(2)} pts</span>`;
+  }
+
+  function fmtSentiDelta(v) {
+    if (!v || v === 0) return '';
+    const pct  = Math.round(Math.abs(v) * 100);
+    const sign = v > 0 ? '+' : '−';
+    const cls  = v > 0 ? 'dg-senti-d-neg' : 'dg-senti-d-pos'; // pos delta on neg = bad; neg delta on neg = good
+    return `<span class="${cls}">(${sign}${pct}%)</span>`;
+  }
+
+  function fmtPosDelta(v) {
+    if (!v || v === 0) return '';
+    const pct  = Math.round(Math.abs(v) * 100);
+    const sign = v > 0 ? '+' : '−';
+    const cls  = v > 0 ? 'dg-senti-d-pos' : 'dg-senti-d-neg';
+    return `<span class="${cls}">(${sign}${pct}%)</span>`;
+  }
+
+  function brandCard(bid, bdata, color, name, short) {
+    const asRat = bdata.rating_as != null ? `${bdata.rating_as.toFixed(1)}★` : '—';
+    const gpRat = bdata.rating_gp != null ? `${bdata.rating_gp.toFixed(1)}★` : 'iOS only';
+    const asDelta = fmtRatingDelta(bdata.rating_delta_as);
+    const gpDelta = fmtRatingDelta(bdata.rating_delta_gp);
+
+    const newBadge = bdata.new_reviews > 0
+      ? `<span class="dg-new-badge">${bdata.new_reviews} new this week</span>`
+      : '';
+
+    const s  = bdata.sentiment;
+    const sd = bdata.sentiment_delta || {};
+    const sentiRow = `<div class="dg-senti">
+      <span class="dg-senti-chip dg-senti-pos">✅ ${s.pos}% positive ${fmtPosDelta(sd.pos_delta)}</span>
+      <span class="dg-senti-chip dg-senti-neu">◦ ${s.neu}% neutral</span>
+      <span class="dg-senti-chip dg-senti-neg">🔴 ${s.neg}% negative ${fmtSentiDelta(sd.neg_delta)}</span>
+    </div>`;
+
+    const praiseTag = bdata.top_praise
+      ? `<span class="dg-theme dg-theme-praise">✦ ${bdata.top_praise}</span>` : '';
+    const compTag = bdata.top_complaint
+      ? `<span class="dg-theme dg-theme-comp">⚑ ${bdata.top_complaint}</span>` : '';
+    const themesRow = (praiseTag || compTag)
+      ? `<div class="dg-themes-row">${praiseTag}${compTag}</div>` : '';
+
+    return `<div class="dg-brand-card" style="--bc:${color}">
+      <div class="dg-brand-hd">
+        <span class="dg-brand-pill" style="background:${color}">${short}</span>
+        <span class="dg-brand-name">${name}</span>
+        ${newBadge}
+      </div>
+      <div class="dg-rating-row">
+        <span class="dg-store-label">App Store</span>
+        <span class="dg-rating-num">${asRat}</span>${asDelta}
+        <span class="dg-store-sep">·</span>
+        <span class="dg-store-label">Google Play</span>
+        <span class="dg-rating-num">${gpRat}</span>${gpDelta}
+      </div>
+      ${sentiRow}${themesRow}
+    </div>`;
+  }
+
+  const BRAND_META = {
+    'courtyard': {name:'Courtyard',         short:'CY',  color:'#5B8DD9'},
+    'rbt':       {name:'Rips by Triumph',   short:'RBT', color:'#E8823A'},
+    'icybox':    {name:'IcyBox',            short:'ICY', color:'#9B59B6'},
+  };
+
+  // ── AC section ─────────────────────────────────────────────────────────
+  const acSection = `<div class="dg-section">
+    <div class="dg-section-label">🏆 Arena Club this week</div>
+    ${brandCard('arena-club', d.arena_club, '#22c55e', 'Arena Club', 'AC')}
+  </div>`;
+
+  // ── Competitors section ────────────────────────────────────────────────
+  const compCards = Object.entries(d.competitors).map(([bid, bdata]) => {
+    const m = BRAND_META[bid] || {name:bid, short:bid.toUpperCase(), color:'#888'};
+    return brandCard(bid, bdata, m.color, m.name, m.short);
+  }).join('');
+  const compSection = `<div class="dg-section">
+    <div class="dg-section-label">📊 Competitor pulse</div>
+    <div class="dg-comp-grid">${compCards}</div>
+  </div>`;
+
+  // ── Ad impact ──────────────────────────────────────────────────────────
+  const impactSection = `<div class="dg-section dg-impact-section">
+    <div class="dg-section-label">🎯 Advertising impact</div>
+    <p class="dg-impact-text">${d.ad_impact}</p>
+  </div>`;
+
+  // ── 3 actions ──────────────────────────────────────────────────────────
+  const actionsHtml = (d.top_actions || []).map((a, i) =>
+    `<li class="dg-action"><span class="dg-action-num">${i+1}</span><span>${a}</span></li>`
   ).join('');
+  const actionsSection = `<div class="dg-section">
+    <div class="dg-section-label">✅ 3 actions this week</div>
+    <ul class="dg-actions-list">${actionsHtml}</ul>
+  </div>`;
+
+  // ── Quote of week ──────────────────────────────────────────────────────
+  const qow = d.quote_of_week;
+  const quoteSection = qow ? `<div class="dg-section dg-quote-section">
+    <div class="dg-section-label">⭐ Quote of the week</div>
+    <blockquote class="dg-quote">
+      <p class="dg-quote-text">"${qow.text}"</p>
+      <cite class="dg-quote-cite">— ${qow.author} · 5★ Arena Club · ${qow.source === 'google-play' ? 'Google Play' : 'App Store'}</cite>
+    </blockquote>
+  </div>` : '';
+
+  document.getElementById('digestItems').innerHTML =
+    acSection + compSection + impactSection + actionsSection + quoteSection;
 }
 
 

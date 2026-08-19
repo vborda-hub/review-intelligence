@@ -29,7 +29,8 @@ DATA_DIR             = HERE / "data"
 ARCHIVE_FILE         = DATA_DIR / "archive.json"
 RATINGS_FILE         = DATA_DIR / "ratings_history.json"
 COPY_BANK_FILE       = DATA_DIR / "copy_bank.json"
-INSIGHTS_CONFIG_FILE = DATA_DIR / "insights_config.json"
+INSIGHTS_CONFIG_FILE  = DATA_DIR / "insights_config.json"
+INSIGHTS_HISTORY_FILE = DATA_DIR / "insights_history.json"
 DASHBOARD            = HERE / "dashboard.html"   # ← adjust if dashboard.html is elsewhere
 
 # CLI flags set by run_weekly.py
@@ -211,6 +212,32 @@ def load_static_sections() -> dict:
         return {}
 
 
+def load_sentiment_deltas() -> dict:
+    """Load WoW positive/negative rate deltas from insights_history.json."""
+    if not INSIGHTS_HISTORY_FILE.exists():
+        return {}
+    try:
+        history = json.loads(INSIGHTS_HISTORY_FILE.read_text())
+        snapshots = history.get("snapshots", [])
+        if not snapshots:
+            return {}
+        cur  = snapshots[-1].get("brands", {})
+        prev = snapshots[-2].get("brands", {}) if len(snapshots) >= 2 else {}
+        deltas = {}
+        for bid in BRAND_ORDER:
+            c = cur.get(bid, {})
+            p = prev.get(bid, {})
+            deltas[bid] = {
+                "neg_delta": round(c.get("neg_delta", 0), 4),
+                "pos_delta": round(
+                    c.get("positive_rate", 0) - p.get("positive_rate", c.get("positive_rate", 0)), 4
+                ),
+            }
+        return deltas
+    except Exception:
+        return {}
+
+
 def save_static_sections(platforms: list, segments: list, ad_plan: list):
     """Persist the freshly-generated static sections to insights_config.json."""
     try:
@@ -274,111 +301,175 @@ def compute_themes(reviews: list) -> tuple:
 
 
 def compute_digest(reviews: list, ratings: dict, sentiment: dict,
-                   complaint_themes: list, praise_themes: list) -> list:
-    """Generate the AI Weekly Digest with per-brand highlights and WoW shifts."""
-    by_brand = defaultdict(list)
+                   complaint_themes: list, praise_themes: list) -> dict:
+    """Build WEEKLY_DIGEST — structured editorial object for the new digest layout.
+
+    Returns a dict with:
+      week, total_new, arena_club, competitors,
+      ad_impact, top_actions, quote_of_week
+    """
+    by_brand     = defaultdict(list)
+    new_by_brand = defaultdict(list)
     for r in reviews:
         bid = r.get("brand")
         if bid in BRAND_ORDER:
             by_brand[bid].append(r)
+            if r.get("is_new"):
+                new_by_brand[bid].append(r)
 
-    total     = len(reviews)
-    new_count = sum(1 for r in reviews if r.get("is_new", False))
-    wow       = load_wow_rating_deltas()
-    digest    = []
+    wow  = load_wow_rating_deltas()
+    sdel = load_sentiment_deltas()
 
-    for bid in BRAND_ORDER:
+    today    = date.today()
+    wk_start = (today - timedelta(days=6)).strftime("%b %-d")
+    wk_end   = today.strftime("%b %-d, %Y")
+
+    def brand_section(bid):
         b     = BRANDS[bid]
+        bkey  = b["key"]
         rat   = ratings[bid]
         s     = sentiment[bid]
         blist = by_brand[bid]
-        bcount  = len(blist)
-        new_n   = sum(1 for r in blist if r.get("is_new", False))
+        nlist = new_by_brand[bid]
+        d     = wow.get(bid, {})
+        sd    = sdel.get(bid, {})
 
-        as_r  = rat.get("appstore")
-        gp_r  = rat.get("google")
-        as_str = f"{as_r['rating']}★ App Store ({as_r['count']} ratings)" if as_r else ""
-        gp_str = f"{gp_r['rating']}★ Google Play ({gp_r['count']} ratings)" if gp_r else "iOS only on Google Play"
+        as_r = rat.get("appstore")
+        gp_r = rat.get("google")
 
-        # WoW shifts
-        d = wow.get(bid, {})
-        wow_parts = []
-        for src, label in [("as", "App Store"), ("gp", "Google Play")]:
-            delta = d.get(src, 0)
-            if delta:
-                sign = "+" if delta > 0 else ""
-                wow_parts.append(f"{label} {sign}{delta} pts WoW")
-        wow_str = " · ".join(wow_parts)
+        top_comp   = sorted(complaint_themes, key=lambda t: t.get(bkey, 0), reverse=True)
+        top_praise = sorted(praise_themes,    key=lambda t: t.get(bkey, 0), reverse=True)
 
-        # Top complaint + praise themes for this brand
-        bkey = b["key"]
-        top_comp   = sorted(complaint_themes,  key=lambda t: t.get(bkey, 0), reverse=True)
-        top_praise = sorted(praise_themes,     key=lambda t: t.get(bkey, 0), reverse=True)
-        comp_line  = (f"Top complaint: {top_comp[0]['name']} ({top_comp[0].get(bkey,0)} mentions)."
-                      if top_comp and top_comp[0].get(bkey, 0) > 0 else "")
-        praise_line= (f"Top praise: {top_praise[0]['name']} ({top_praise[0].get(bkey,0)} mentions)."
-                      if top_praise and top_praise[0].get(bkey, 0) > 0 else "")
+        return {
+            "rating_as":        round(as_r["rating"], 1)  if as_r else None,
+            "rating_gp":        round(gp_r["rating"], 1)  if gp_r else None,
+            "rating_delta_as":  d.get("as", 0),
+            "rating_delta_gp":  d.get("gp", 0),
+            "new_reviews":      len(nlist),
+            "new_appstore":     sum(1 for r in nlist if r.get("source") == "app-store"),
+            "new_gplay":        sum(1 for r in nlist if r.get("source") == "google-play"),
+            "total_reviews":    len(blist),
+            "sentiment":        s,
+            "sentiment_delta":  sd,
+            "top_complaint":    top_comp[0]["name"]   if top_comp   and top_comp[0].get(bkey, 0)   > 0 else None,
+            "top_praise":       top_praise[0]["name"] if top_praise and top_praise[0].get(bkey, 0) > 0 else None,
+        }
 
-        parts = [
-            f"{b['name']}: {as_str} · {gp_str}.",
-            f"Sentiment: {s['pos']}% positive / {s['neu']}% neutral / {s['neg']}% negative across {bcount} reviews on file.",
-        ]
-        if wow_str:
-            parts.append(f"Rating shift: {wow_str}.")
-        if new_n:
-            parts.append(f"{new_n} new reviews added this week.")
-        if comp_line:
-            parts.append(comp_line)
-        if praise_line:
-            parts.append(praise_line)
+    ac   = brand_section("arena-club")
+    comps = {bid: brand_section(bid) for bid in ["courtyard", "rbt", "icybox"]}
 
-        digest.append({"color": b["color"], "brand": b["short"], "text": " ".join(parts)})
+    # Best quote from persistent copy bank (in_rotation, newest / least-shown first)
+    copy_bank  = load_copy_bank()
+    quote_week = None
+    if copy_bank:
+        q = copy_bank[0]
+        quote_week = {
+            "text":   q["text"],
+            "author": q.get("author", "Anonymous"),
+            "stars":  5,
+            "source": q.get("source", "app-store"),
+        }
 
-    # Cross-brand top complaint
-    comp_totals = defaultdict(int)
-    for r in reviews:
-        if r.get("sentiment") in ("negative", "neutral"):
-            for tid in r.get("themes", []):
-                if any(t["id"] == tid for t in COMPLAINT_THEMES):
-                    comp_totals[tid] += 1
+    # ── Advertising impact paragraph ─────────────────────────────────────────
+    cy_neg  = sentiment["courtyard"]["neg"]
+    icy_neg = sentiment["icybox"]["neg"]
+    rbt_neg = sentiment["rbt"]["neg"]
+    ac_pos  = sentiment["arena-club"]["pos"]
 
-    if comp_totals:
-        tid   = max(comp_totals, key=comp_totals.get)
-        tname = next((t["name"] for t in COMPLAINT_THEMES if t["id"] == tid), tid)
-        top_brand_id  = max(BRAND_ORDER, key=lambda b: next(
-            (t.get(BRANDS[b]["key"], 0) for t in complaint_themes if t["id"] == tid), 0))
-        top_brand_cnt = next(
-            (t.get(BRANDS[top_brand_id]["key"], 0) for t in complaint_themes if t["id"] == tid), 0)
-        digest.append({
-            "color": "#f87171", "brand": "ALL",
-            "text": (f"Cross-brand #1 complaint: \"{tname}\" — {comp_totals[tid]} total negative mentions. "
-                     f"{BRANDS[top_brand_id]['name']} leads with {top_brand_cnt} mentions."),
-        })
+    cy_sd  = sdel.get("courtyard", {})
+    icy_sd = sdel.get("icybox",    {})
+    ac_sd  = sdel.get("arena-club",{})
 
-    # Cross-brand top praise
-    praise_totals = defaultdict(int)
-    for r in reviews:
-        if r.get("sentiment") == "positive":
-            for tid in r.get("themes", []):
-                if any(t["id"] == tid for t in PRAISE_THEMES):
-                    praise_totals[tid] += 1
+    impact_parts = []
+    if cy_sd.get("neg_delta", 0) > 0.03:
+        impact_parts.append(
+            f"Courtyard's negative rate climbed {cy_sd['neg_delta']*100:.0f}% this week — "
+            f"their CS issues are accelerating. Run contrast ads now: real response times, real access."
+        )
+    elif cy_neg > 45:
+        impact_parts.append(
+            f"Courtyard holds at {cy_neg}% negative. Their churning users are a warm audience — "
+            f"target Courtyard brand keywords with AC's CS speed as the hook."
+        )
 
-    if praise_totals:
-        tid   = max(praise_totals, key=praise_totals.get)
-        tname = next((t["name"] for t in PRAISE_THEMES if t["id"] == tid), tid)
-        digest.append({
-            "color": "#4ade80", "brand": "ALL",
-            "text": f"Cross-brand #1 praise: \"{tname}\" — {praise_totals[tid]} positive mentions.",
-        })
+    if icy_sd.get("neg_delta", 0) > 0.03:
+        impact_parts.append(
+            f"IcyBox trust is deteriorating ({icy_neg}% negative and rising). "
+            f"Legitimacy ads hit hardest right now — show AC's real review count vs theirs."
+        )
+    elif icy_neg > 45:
+        impact_parts.append(
+            f"IcyBox stays at {icy_neg}% negative with trust concerns. "
+            f"A direct comparison ad — AC's ratings, operating history, BBB standing — "
+            f"converts displaced IcyBox users."
+        )
 
-    # Archive summary
-    digest.append({
-        "color": "#94a3b8", "brand": "ALL",
-        "text": (f"Archive total: {total} reviews on file across all brands and sources. "
-                 + (f"{new_count} new reviews added this week." if new_count else "")),
-    })
+    if ac_sd.get("pos_delta", 0) > 0.03:
+        impact_parts.append(
+            f"AC's positive sentiment rose {ac_sd['pos_delta']*100:.0f}% this week — "
+            f"scale what's working. Pull the best new reviews into ad copy and push the Buyback harder."
+        )
+    elif ac_pos > 45:
+        impact_parts.append(
+            f"AC's positive rate ({ac_pos}%) is an asset competitors can't match. "
+            f"Pull actual user quotes into ad creative — earned praise converts better than brand claims."
+        )
 
-    return digest
+    if not impact_parts:
+        impact_parts.append(
+            f"Sentiment is stable across all four brands this week. Maintain current creative mix. "
+            f"Keep the Buyback Guarantee as the lead message — it's AC's clearest differentiator "
+            f"against every competitor's top complaint."
+        )
+
+    ad_impact = " ".join(impact_parts)
+
+    # ── 3 actions this week ───────────────────────────────────────────────────
+    actions = []
+
+    ac_top_comp = ac.get("top_complaint")
+    if ac_top_comp:
+        actions.append(
+            f"Counter \"{ac_top_comp}\" in ad copy — it's AC's top complaint. Lead with the Buyback "
+            f"Guarantee headline to neutralize value anxiety before a user even downloads."
+        )
+    else:
+        actions.append(
+            "Lead all paid ads with the Buyback Guarantee — it directly answers the industry's "
+            "biggest complaint across all four brands."
+        )
+
+    if cy_neg > 50:
+        actions.append(
+            f"Run CS contrast creatives targeting Courtyard brand keywords. Courtyard is {cy_neg}% "
+            f"negative — their users are already looking for an exit. A converted-user testimonial "
+            f"closes the deal better than any branded ad."
+        )
+    elif icy_neg > 45:
+        actions.append(
+            f"Target IcyBox review threads with legitimacy messaging. IcyBox is {icy_neg}% negative "
+            f"— their disaffected users are a warm audience for AC's authenticity angle."
+        )
+    else:
+        actions.append(
+            "Increase retargeting toward competitor brand keywords. All three competitors have "
+            "elevated negative rates — there is a ready audience of frustrated collectors."
+        )
+
+    actions.append(
+        f"Trigger in-app review prompts after successful rips. AC has {ac['total_reviews']} reviews "
+        f"vs RBT's 200K+ — review volume is social proof, and more reviews lower your CAC."
+    )
+
+    return {
+        "week":         f"{wk_start}–{wk_end}",
+        "total_new":    sum(len(new_by_brand[b]) for b in BRAND_ORDER),
+        "arena_club":   ac,
+        "competitors":  comps,
+        "ad_impact":    ad_impact,
+        "top_actions":  actions,
+        "quote_of_week": quote_week,
+    }
 
 
 def generate_insights(reviews: list, ratings: dict, sentiment: dict,
@@ -848,14 +939,8 @@ def js_themes(themes: list) -> str:
     return "[\n" + ",\n".join(parts) + "\n]"
 
 
-def js_digest(items: list) -> str:
-    parts = []
-    for d in items:
-        parts.append(
-            f'  {{"color":{json.dumps(d["color"])},"brand":{json.dumps(d["brand"])},'
-            f'"text":{json.dumps(d["text"])}}}'
-        )
-    return "[\n" + ",\n".join(parts) + "\n]"
+def js_weekly_digest(digest: dict) -> str:
+    return json.dumps(digest, ensure_ascii=False, indent=2)
 
 
 def js_insights(insights: dict) -> str:
@@ -984,7 +1069,7 @@ def main():
     html = inject(html, "SENTIMENT",        js_sentiment(sentiment))
     html = inject(html, "COMPLAINT_THEMES", js_themes(complaint_themes))
     html = inject(html, "PRAISE_THEMES",    js_themes(praise_themes))
-    html = inject(html, "DIGEST_ITEMS",     js_digest(digest))
+    html = inject(html, "WEEKLY_DIGEST",    js_weekly_digest(digest))
 
     # Update digest header meta line
     new_count = sum(1 for r in reviews if r.get("is_new", False))
