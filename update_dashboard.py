@@ -1118,6 +1118,14 @@ def main():
         return
     print(f"  {len(reviews)} reviews loaded")
 
+    # Rolling 90-day window — always show last 90 days from today
+    ROLLING_DAYS = 90
+    cutoff_start = (date.today() - timedelta(days=ROLLING_DAYS)).isoformat()
+    cutoff_end   = date.today().isoformat()
+    before = len(reviews)
+    reviews = [r for r in reviews if cutoff_start <= r.get("date", "") <= cutoff_end]
+    print(f"  Rolling {ROLLING_DAYS}-day window ({cutoff_start} → {cutoff_end}): {before} → {len(reviews)} reviews")
+
     print("Loading ratings history...")
     ratings = load_ratings()
 

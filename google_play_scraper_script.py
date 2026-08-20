@@ -18,7 +18,7 @@ APPS = {
     "rbt":        {"name": "Rips by Triumph",  "package": "com.triumpharcade.tcg"},
     # IcyBox: iOS only
 }
-REVIEWS_PER_APP = 500
+REVIEWS_PER_APP = 750
 DELAY = 2.0
 
 def fetch_info(package):
