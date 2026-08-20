@@ -16,7 +16,7 @@ PATHS (edit if your layout differs):
   DASHBOARD     — path to your dashboard.html
 """
 
-import json, re, sys
+import json, re, sys, urllib.request, time
 from datetime import date, timedelta
 from pathlib import Path
 from collections import defaultdict
@@ -47,6 +47,13 @@ BRANDS = {
     "icybox":     {"name": "IcyBox",          "color": "#9B59B6", "short": "ICY", "key": "icy"},
 }
 BRAND_ORDER = ["arena-club", "courtyard", "rbt", "icybox"]
+
+APP_STORE_URLS = {
+    "arena-club": "https://apps.apple.com/us/app/arena-club-sports-tcg-card/id6499444724",
+    "courtyard":  "https://apps.apple.com/us/app/courtyard-tcg-watches-cards/id6748155184",
+    "rbt":        "https://apps.apple.com/us/app/rips-by-triumph/id6751921248",
+    "icybox":     "https://apps.apple.com/us/app/icybox/id6758816716",
+}
 
 # Fallback ratings (used if ratings_history.json is empty / not yet populated)
 RATING_FALLBACKS = {
@@ -906,6 +913,89 @@ def js_reviews(reviews: list) -> str:
     return "[\n" + ",\n".join(lines) + "\n]"
 
 
+def scrape_appstore_data() -> dict:
+    """
+    Fetch each App Store page and extract:
+      - chart position + category
+      - live rating count string (e.g. "4.9K")
+      - live average rating
+    Returns {brand_id: {"chart":"#165","category":"Shopping","count":"4.9K","rating":4.5}}
+    """
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    results = {}
+    for bid, url in APP_STORE_URLS.items():
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                html = resp.read().decode("utf-8", errors="replace")
+
+            entry = {}
+
+            # Chart position
+            m = re.search(r'"position"\s*:\s*(\d+)', html)
+            cat_m = re.search(r'"genre(?:Name)?"\s*:\s*"([^"]+)"', html)
+            if m:
+                entry["chart"]    = f"#{m.group(1)}"
+                entry["category"] = cat_m.group(1) if cat_m else ""
+
+            # Rating count — JSON-LD aggregateRating.ratingCount
+            count_m = re.search(r'"ratingCount"\s*:\s*(\d+)', html)
+            if count_m:
+                n = int(count_m.group(1))
+                if n >= 1_000_000:
+                    entry["count"] = f"{n/1_000_000:.1f}M"
+                elif n >= 1_000:
+                    entry["count"] = f"{n/1000:.1f}K"
+                else:
+                    entry["count"] = str(n)
+
+            # Average rating — JSON-LD aggregateRating.ratingValue
+            rating_m = re.search(r'"ratingValue"\s*:\s*([\d.]+)', html)
+            if rating_m:
+                entry["rating"] = round(float(rating_m.group(1)), 1)
+
+            if entry:
+                results[bid] = entry
+                print(f"  {bid}: {entry.get('chart','?')} {entry.get('category','')} | "
+                      f"{entry.get('rating','?')}★ {entry.get('count','?')} ratings")
+            else:
+                print(f"  {bid}: no data found in page HTML")
+
+        except Exception as e:
+            print(f"  {bid}: fetch failed — {e}")
+        time.sleep(1.5)
+    return results
+
+
+# Keep old name as alias for backward compat
+def scrape_chart_positions() -> dict:
+    return scrape_appstore_data()
+
+
+def update_chart_positions(html: str, charts: dict) -> str:
+    """Patch the STORE_META const in the HTML with fresh chart positions."""
+    if not charts:
+        return html
+    for bid, data in charts.items():
+        chart = data.get("chart", "—")
+        cat   = data.get("category", "")
+        # Replace "chart": "..." and "category": "..." for this brand's appstore entry
+        # We look for the brand key then replace within a reasonable window
+        pattern = (
+            rf'("{re.escape(bid)}"[\s\S]{{0,300}}"appstore"\s*:\s*\{{[^}}]*?"chart"\s*:\s*")([^"]*)'
+        )
+        html = re.sub(pattern, lambda m: m.group(0).replace(m.group(2), chart), html)
+        pattern2 = (
+            rf'("{re.escape(bid)}"[\s\S]{{0,400}}"appstore"\s*:\s*\{{[^}}]*?"category"\s*:\s*")([^"]*)'
+        )
+        html = re.sub(pattern2, lambda m: m.group(0).replace(m.group(2), cat), html)
+    return html
+
+
 def js_ratings(ratings: dict) -> str:
     parts = []
     for bid in BRAND_ORDER:
@@ -1056,6 +1146,21 @@ def main():
         reverse=True
     )
 
+    # Scrape live App Store data (chart positions + live ratings/counts)
+    # Must happen BEFORE injecting RATINGS so live counts go into the dashboard
+    print("\nScraping live App Store data...")
+    charts = scrape_appstore_data()
+    if charts:
+        for bid, cdata in charts.items():
+            if bid in ratings:
+                if "count" in cdata:
+                    ratings[bid]["appstore"]["count"] = cdata["count"]
+                if "rating" in cdata:
+                    ratings[bid]["appstore"]["rating"] = cdata["rating"]
+        print(f"  Live App Store data applied for {len(charts)} brands")
+    else:
+        print("  Could not fetch App Store data — keeping fallback values")
+
     # Read dashboard
     print(f"\nReading {DASHBOARD.name}...")
     html = DASHBOARD.read_text(encoding="utf-8")
@@ -1078,6 +1183,11 @@ def main():
                  if new_count else
                  f"{week_label} · {len(reviews)} total reviews on file")
     html = re.sub(r'id="digestMeta">[^<]*<', f'id="digestMeta">{meta_text}<', html)
+
+    # Patch STORE_META with fresh chart positions
+    if charts:
+        html = update_chart_positions(html, charts)
+        print(f"  Chart positions updated for {len(charts)} brands")
 
     # Write back
     DASHBOARD.write_text(html, encoding="utf-8")
